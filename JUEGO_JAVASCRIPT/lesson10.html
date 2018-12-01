@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Game in Javascript</title>
+    <style>* { padding: 0; margin: 0; } canvas { background: #eee; display: block; margin: 0 auto; }
+    
+    #myCanvas{
+        background-image:    url("8bit.png");
+        background-size:     cover;                      
+        background-repeat:   no-repeat;
+        background-position: center center;
+    }
+    </style>
+</head>
+<body>
+<link href="https://fonts.googleapis.com/css?family=VT323" rel="stylesheet"> 
+<canvas id="myCanvas" width="480" height="320">
+    <audio id="myAudio" src="facebook-pop.mp3"></audio>
+    <audio id="over" src="over.mp3"></audio>
+    <audio id="champions" src="champions.mp3"></audio>
+    <audio id="kick" src="kick_shock.wav"></audio>
+</canvas>
+<script>
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+    var ballRadius = 10;
+    var x = canvas.width/2;
+    var y = canvas.height-30;
+    var dx = 2.5;
+    var dy = -2.5;
+    var paddleHeight = 10;
+    var paddleWidth = 75;
+    var paddleX = (canvas.width-paddleWidth)/2;
+    var rightPressed = false;
+    var leftPressed = false;
+    var brickRowCount = 5;
+    var brickColumnCount = 8;
+    var brickWidth = 75;
+    var brickHeight = 20;
+    var brickPadding = 10;
+    var brickOffsetTop = 30;
+    var brickOffsetLeft = 30;
+    var score = 0;
+    var final_score = 0;
+    var lives = 3;
+    var lvl = -1;
+    var block_count = 0;
+    var cont=0;
+//--------------------------------------------------------------------------------------------------------------
+    var bolita = new Image();
+    bolita.onload = function() {
+        imageLoaded();
+    }
+    bolita.src = 'web.png';
+
+    var cuadro1 = new Image();
+    cuadro1.onload = function() {
+            imageLoaded();
+    }
+
+    var barrita = new Image();
+    barrita.onload = function() {
+        imageLoaded();
+    }
+    barrita.src = '56-Breakout-Tiles.png';
+    
+
+    //
+    var myAudio = document.getElementById('myAudio');
+    var over = document.getElementById('over');
+    var champions = document.getElementById('champions');
+    var kick = document.getElementById('kick');
+
+    
+//--------------------------------------------------------------------------------------------------------------
+    var bricks = [];
+    var imgArray = new Array();
+    for (var i = 1;i < 21; i++) {
+        var ruta = i+'-Breakout-Tiles.png';
+        imgArray[i-1] = new Image();
+        imgArray[i-1].src = ruta;
+    }
+
+
+    document.addEventListener("keydown", keyDownHandler, false);
+    document.addEventListener("keyup", keyUpHandler, false);
+    document.addEventListener("mousemove", mouseMoveHandler, false);
+
+    function keyDownHandler(e) {
+        if(e.keyCode == 39) {
+            rightPressed = true;
+        }
+        else if(e.keyCode == 37) {
+            leftPressed = true;
+        }
+    }
+    function keyUpHandler(e) {
+        if(e.keyCode == 39) {
+            rightPressed = false;
+        }
+        else if(e.keyCode == 37) {
+            leftPressed = false;
+        }
+    }
+    function mouseMoveHandler(e) {
+        var relativeX = e.clientX - canvas.offsetLeft;
+        if(relativeX > 0 && relativeX < canvas.width) {
+            paddleX = relativeX - paddleWidth/2;
+        }
+    }
+    function collisionDetection() {
+        for(var c=0; c<brickColumnCount; c++) {
+            for(var r=0; r<brickRowCount; r++) {
+                var b = bricks[c][r];
+                if(b.status == 1) {
+                    if(x > b.x && x < b.x+brickWidth && y > b.y && y < b.y+brickHeight) {
+                        dy = -dy;
+                        b.status = 0;
+                        score++;
+                        block_count--;
+                        myAudio.play();
+                        //if(score == 2) {
+                        if(block_count == 0) {
+                            //alert("YOU WIN, CONGRATS!");
+                            //document.location.reload();
+                            if(lvl == 1) {
+                                kick.pause();
+                                champions.play();
+                                alert("Has ganado!\n           _.+._\n       (^\\\/^\\\/^)\n       \\@*@*@\/\n          {_____}");
+                                champions.pause();
+                                window.location.reload();
+                            }
+                            final_score = final_score + score ;
+
+                            lvl++;
+                            levels(lvl);
+                            draw();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    
+
+    function drawBall() {
+
+        var ctx3 = canvas.getContext("2d");
+        ctx3.drawImage(bolita, x, y, (ballRadius*2),Math.PI*4);
+        var pattern = ctx3.createPattern(bolita, "repeat-x");
+        ctx3.beginPath();
+        //ctx.arc(x, y, ballRadius, 0, Math.PI*2);
+        //ctx.fillStyle = "#0095DD";
+        //------------------------------------------
+        
+        ctx3.fillStyle = pattern;
+        //------------------------------------------
+        ctx3.fill();
+        ctx3.closePath();
+
+    }
+    function drawPaddle() {
+        var ctx4 =  canvas.getContext("2d");
+        ctx4.drawImage(barrita, paddleX, canvas.height-paddleHeight, paddleWidth, paddleHeight );
+        var pattern = ctx4.createPattern(barrita, "repeat-x");
+        ctx4.beginPath();
+        //ctx4.rect(paddleX, canvas.height-paddleHeight, paddleWidth, paddleHeight);
+        ctx4.fillStyle = pattern;
+        ctx4.fill();
+        ctx4.closePath();
+    }
+    function drawBricks() {
+//var myNumeroAleatorio = Math.floor(Math.random()*19)+1;
+        for(var c=0; c<brickColumnCount; c++) {
+            
+            for(var r=0; r<brickRowCount; r++) {
+                if(bricks[c][r].status == 1) {
+                    var brickX = (r*(brickWidth+brickPadding))+brickOffsetLeft;
+                    var brickY = (c*(brickHeight+brickPadding))+brickOffsetTop;
+                    //alert(myNumeroAleatorio);
+                    bricks[c][r].x = brickX;
+                    bricks[c][r].y = brickY;
+                    var ctx2 = canvas.getContext("2d");
+                    ctx2.drawImage(imgArray[r],brickX, brickY, brickWidth, brickHeight);
+                    var pattern = ctx2.createPattern(imgArray[r], "repeat");
+                    ctx2.beginPath();
+                    //ctx2.rect(brickX, brickY, brickWidth, brickHeight);
+                    ctx2.fillStyle = pattern;
+                    ctx2.fill();
+                    ctx2.closePath();
+                }
+            }
+        }
+    }
+
+    function brick0(bricks){
+        for(var c=0; c<brickColumnCount; c++) {
+            bricks[c] = [];
+            for(var r=0; r<brickRowCount; r++) {
+                bricks[c][r] = { x: 0, y: 0, status: 0 };
+            }
+        }
+        for (var j = 0; j < 3; j++) {
+            for (var i = 0; i < brickRowCount; i++) {
+                bricks[j][i] = { x: 0, y: 0, status: 1 };    
+            }
+        }
+        block_count = 3*brickRowCount;
+    }
+    function brick1(bricks){
+        for(var c=0; c<brickColumnCount; c++) {
+            bricks[c] = [];
+            for(var r=0; r<brickRowCount; r++) {
+                bricks[c][r] = { x: 0, y: 0, status: 0 };
+            }
+        }
+        bricks[0][2] = { x: 0, y: 0, status: 1 };
+        bricks[1][0] = { x: 0, y: 0, status: 1 };
+        bricks[1][4] = { x: 0, y: 0, status: 1 };
+        bricks[2][1] = { x: 0, y: 0, status: 1 };
+        bricks[2][3] = { x: 0, y: 0, status: 1 };
+        bricks[3][2] = { x: 0, y: 0, status: 1 };
+        bricks[4][0] = { x: 0, y: 0, status: 1 };
+        bricks[4][1] = { x: 0, y: 0, status: 1 };
+        bricks[4][2] = { x: 0, y: 0, status: 1 };
+        bricks[4][3] = { x: 0, y: 0, status: 1 };
+        bricks[4][4] = { x: 0, y: 0, status: 1 };
+        bricks[5][0] = { x: 0, y: 0, status: 1 };
+        bricks[5][2] = { x: 0, y: 0, status: 1 };
+        bricks[5][4] = { x: 0, y: 0, status: 1 };
+        bricks[6][1] = { x: 0, y: 0, status: 1 };
+        bricks[6][3] = { x: 0, y: 0, status: 1 };
+        bricks[7][0] = { x: 0, y: 0, status: 1 };
+        bricks[7][4] = { x: 0, y: 0, status: 1 };
+        block_count = 18;
+    }
+    function brick2(bricks){
+        for(var c=0; c<brickColumnCount; c++) {
+            bricks[c] = [];
+            for(var r=0; r<brickRowCount; r++) {
+                bricks[c][r] = { x: 0, y: 0, status: 0 };
+            }
+        }
+        bricks[0][0] = { x: 0, y: 0, status: 1 };
+        bricks[0][1] = { x: 0, y: 0, status: 1 };
+        bricks[0][3] = { x: 0, y: 0, status: 1 };
+        bricks[0][4] = { x: 0, y: 0, status: 1 };
+        bricks[1][0] = { x: 0, y: 0, status: 1 };
+        bricks[1][4] = { x: 0, y: 0, status: 1 };
+        bricks[2][0] = { x: 0, y: 0, status: 1 };
+        bricks[2][2] = { x: 0, y: 0, status: 1 };
+        bricks[2][4] = { x: 0, y: 0, status: 1 };
+        bricks[3][0] = { x: 0, y: 0, status: 1 };
+        bricks[3][4] = { x: 0, y: 0, status: 1 };
+        bricks[4][1] = { x: 0, y: 0, status: 1 };
+        bricks[4][3] = { x: 0, y: 0, status: 1 };
+        bricks[6][0] = { x: 0, y: 0, status: 1 };
+        bricks[6][1] = { x: 0, y: 0, status: 1 };
+        bricks[6][3] = { x: 0, y: 0, status: 1 };
+        bricks[6][4] = { x: 0, y: 0, status: 1 };
+        bricks[7][1] = { x: 0, y: 0, status: 1 };
+        bricks[7][3] = { x: 0, y: 0, status: 1 };
+        block_count = 19;
+    }
+
+    function drawScore() {
+        ctx.font = "30px VT323";
+        //font-family: 'VT323', monospace;
+        ctx.fillStyle = "white";
+        ctx.fillText("Score: "+score, 8, 20);
+    }
+    function drawNivel() {
+        ctx.font = "30px VT323";
+        //font-family: 'VT323', monospace;
+        ctx.fillStyle = "white";
+        var temp = cont + 1;
+        ctx.fillText("Level: "+cont, 180, 20);
+    }
+    function drawLives() {
+        ctx.font = "30px VT323";
+        ctx.fillStyle = "white";
+        ctx.fillText("Lives: "+lives, canvas.width-105, 20);
+    }
+
+    function draw() {
+        kick.play();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBricks();
+        drawBall();
+        drawPaddle();
+        drawScore();
+        drawLives();
+        drawNivel();
+        collisionDetection();
+
+        if(x + dx > canvas.width-(ballRadius*2) || x + dx < (ballRadius*2)) {
+            dx = -dx;
+        }
+        if(y + dy < (ballRadius*2)) {
+            dy = -dy;
+        }
+        else if(y + dy > canvas.height-(ballRadius*2)) {
+            if(x > paddleX && x < paddleX + paddleWidth) {
+                dy = -dy;
+            }
+            else {
+                lives--;
+                if(!lives) {
+                    kick.pause();
+                    over.play();
+                    //window.location.reload();
+                    alert("Has Perdido");
+                    over.pause();
+                    window.location.reload();
+                    
+                }
+                else {
+                    x = canvas.width/4;
+                    y = canvas.height-80;
+                    dx = 3;
+                    dy = -3;
+                    paddleX = (canvas.width-paddleWidth)/2;
+                }
+            }
+        }
+
+        if(rightPressed && paddleX < canvas.width-paddleWidth) {
+            paddleX += 7;
+        }
+        else if(leftPressed && paddleX > 0) {
+            paddleX -= 7;
+        }
+
+        x += dx;
+        y += dy;
+        requestAnimationFrame(draw);
+    }
+
+    function levels(l){
+        cont++;
+        switch (l) {
+            case 0:
+            brick1(bricks);
+            break;
+            case 1:
+            brick2(bricks);
+            break;
+            default:
+            brick0(bricks);
+        } 
+    }
+    
+    levels(lvl);
+    draw();
+</script>
+
+</body>
+</html>
